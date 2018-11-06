@@ -1,0 +1,49 @@
+﻿<Window x:Class="io.borgle.qqreader.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:Helper="clr-namespace:io.borgle.Controls.Helper"
+        xmlns:local="clr-namespace:io.borgle.qqreader.ViewModel"
+        mc:Ignorable="d"
+        Title="安卓 QQ 聊天数据库解析 --- by borgle" Height="450" Width="800">
+    <Window.DataContext>
+        <local:MainWindowVM />
+    </Window.DataContext>
+    <Grid Margin="3 10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Border Grid.ColumnSpan="2" Grid.Row="0" BorderBrush="Black" BorderThickness="0 0 0 3" />
+        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0 0 3 0">
+            <Label Content="请输入 IMEI 号：" />
+            <TextBox Text="{Binding DatabaseInfo.IMEI}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Grid.Row="0" Margin="3 0 0 0">
+            <Label Content="请选择 QQ 数据库文件地址：" />
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="选择文件" Command="{Binding SelectDbFileCommand}" />
+                <TextBox Text="{Binding DatabaseInfo.FilePath}" />
+            </DockPanel>
+        </StackPanel>
+        <ListBox x:Name="TableList" Grid.Column="0" Grid.Row="1"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    ItemsSource="{Binding TableItems}">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="SelectionChanged">
+                    <i:InvokeCommandAction Command="{Binding TableSelectedCommand}" CommandParameter="{Binding ElementName=TableList,Path=SelectedItem}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+        </ListBox>
+        <DataGrid Grid.Column="1"
+                  Grid.Row="1"
+                  ItemsSource="{Binding TableDataItems}"
+                  Helper:DataGridColumnHelper.ColumnsSource="{Binding TableColumns}"></DataGrid>
+    </Grid>
+</Window>
