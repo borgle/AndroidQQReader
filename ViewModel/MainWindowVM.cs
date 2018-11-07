@@ -1,8 +1,8 @@
-﻿
-using GalaSoft.MvvmLight.Command;
+﻿using GalaSoft.MvvmLight.Command;
 using io.borgle.core.ViewModel;
 using io.borgle.Core.Helper;
 using io.borgle.qqreader.Model;
+using MahApps.Metro.Controls.Dialogs;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,9 @@ namespace io.borgle.qqreader.ViewModel
 {
     class MainWindowVM : ViewModelBase
     {
+        private readonly IDialogCoordinator _dialogCoordinator = DialogCoordinator.Instance;
         private SqliteHelper dbHelper;
+
         public MainWindowVM()
         {
             this.DatabaseInfo = new QQDatabase();
@@ -24,6 +26,12 @@ namespace io.borgle.qqreader.ViewModel
             this.TableColumns = new ObservableCollection<ColumnInfo>();
         }
 
+        private int _SelectedTabItemIndex;
+        public int SelectedTabItemIndex
+        {
+            get { return _SelectedTabItemIndex; }
+            set { Set<int>(ref _SelectedTabItemIndex, value); }
+        }
         private QQDatabase _database;
         public QQDatabase DatabaseInfo
         {
@@ -57,6 +65,13 @@ namespace io.borgle.qqreader.ViewModel
                 return new RelayCommand(SelectDbFileCommandWorker, () => true);
             }
         }
+        public ICommand ReadDBCommand
+        {
+            get
+            {
+                return new RelayCommand(ReadDBCommandWorker, () => true);
+            }
+        }
         public ICommand TableSelectedCommand
         {
             get
@@ -75,10 +90,23 @@ namespace io.borgle.qqreader.ViewModel
             if (dialog.ShowDialog().GetValueOrDefault())
             {
                 this.DatabaseInfo.FilePath = dialog.FileName;
-                String connectionString = string.Format("Data Source={0};Version=3", this.DatabaseInfo.FilePath);
-                this.dbHelper = new SqliteHelper(connectionString);
-                this.QueryTables();
             }
+        }
+
+        private void ReadDBCommandWorker()
+        {
+            if (String.IsNullOrEmpty(this.DatabaseInfo.FilePath))
+            {
+                _dialogCoordinator.ShowMessageAsync(this, "出错了", "请先选择一个 QQ 数据库文件");
+                return;
+            }
+            String connectionString = string.Format("Data Source={0};Version=3", this.DatabaseInfo.FilePath);
+            this.dbHelper = new SqliteHelper(connectionString);
+            this.TableItems.Clear();
+            this.QueryTables().ForEach(tb => {
+                this.TableItems.Add(tb);
+            });
+            this.SelectedTabItemIndex = 1;
         }
 
         private void TableSelectedCommandWorker(String tableName)
@@ -124,16 +152,17 @@ namespace io.borgle.qqreader.ViewModel
         }
 
 
-        private void QueryTables()
+        private List<String> QueryTables()
         {
-            this.TableItems.Clear();
-            String sql = "select name from sqlite_master where type='table'";
+            String sql = "select name from sqlite_master where type='table' order by name";
             SQLiteDataReader reader = dbHelper.ExecuteReader(sql);
+            List<String> tableNameList = new List<string>();
             while (reader.Read())
             {
-                this.TableItems.Add(reader.GetString(0));
+                tableNameList.Add(reader.GetString(0));
             }
             reader.Close();
+            return tableNameList;
         }
 
         private String Decode(String str)
