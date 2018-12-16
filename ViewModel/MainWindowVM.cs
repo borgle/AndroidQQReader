@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.SQLite;
+using System.Text;
 using System.Windows.Input;
 using static io.borgle.Controls.Helper.DataGridColumnHelper;
 
@@ -135,9 +136,16 @@ namespace io.borgle.qqreader.ViewModel
                     String data = null;
                     if (!reader.IsDBNull(i))
                     {
-                        if (reader.GetDataTypeName(i) == "TEXT")
+                        String typeName = reader.GetDataTypeName(i);
+                        if (typeName == "TEXT")
                         {
                             data = Decode(reader.GetString(i));
+                        }
+                        else if (typeName == "BLOB")
+                        {
+                            byte[] bytes = new byte[reader.GetBytes(i, 0, null, 0, int.MaxValue)];
+                            reader.GetBytes(i, 0, bytes, 0, bytes.Length);
+                            data = Decode(bytes);
                         }
                         else
                         {
@@ -164,6 +172,38 @@ namespace io.borgle.qqreader.ViewModel
             reader.Close();
             return tableNameList;
         }
+        private String Decode(byte[] input)
+        {
+            if (String.IsNullOrEmpty(this.DatabaseInfo.IMEI))
+            {
+                return Encoding.UTF8.GetString(input);
+            }
+
+            byte[] codeKey = Encoding.UTF8.GetBytes(this.DatabaseInfo.IMEI);
+            int codeKeyLen = codeKey.Length;
+
+            byte[] output = new byte[input.Length];
+            int i;
+            if (codeKeyLen >= input.Length)
+            {
+                for (i = 0; i < input.Length; i++)
+                {
+                    output[i] = (byte)(input[i] ^ codeKey[i]);
+                }
+            }
+            else
+            {
+                for (i = 0; i < input.Length; i++)
+                {
+                    output[i] = (byte)(input[i] ^ codeKey[i % codeKeyLen]);
+                }
+            }
+            if (output.Length == 0)
+            {
+                return "";
+            }
+            return Encoding.UTF8.GetString(output);
+        }
 
         private String Decode(String str)
         {
@@ -175,8 +215,8 @@ namespace io.borgle.qqreader.ViewModel
             {
                 return str;
             }
-            char[] codeKey = this.DatabaseInfo.secKey;
-            int codeKeyLen = this.DatabaseInfo.secKeyLength;
+            char[] codeKey = this.DatabaseInfo.IMEI.ToCharArray();
+            int codeKeyLen = codeKey.Length;
             char[] input = str.ToCharArray();
             char[] output = new char[input.Length];
             int i;

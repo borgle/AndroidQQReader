@@ -26,28 +26,5 @@ namespace io.borgle.qqreader.Model
                 Set<String>(ref _FilePath, value);
             }
         }
-
-        public Char[] secKey
-        {
-            get
-            {
-                if(this.IMEI == null)
-                {
-                    return null;
-                }
-                return this.IMEI.ToCharArray();
-            }
-        }
-        public int secKeyLength
-        {
-            get
-            {
-                if (this.IMEI == null)
-                {
-                    return 0;
-                }
-                return this.secKey.Length;
-            }
-        }
     }
 }
